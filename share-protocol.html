@@ -8,7 +8,7 @@
 <h2>1. URL scheme</h2>
 <p>基础地址：<code>cuiji://share</code>。</p>
 <div class="table"><table><tr><th>参数</th><th>必须</th><th>说明</th></tr><tr><td><code>v</code></td><td>是</td><td>固定 <code>1</code></td></tr><tr><td><code>title</code></td><td>是</td><td>菜名，首尾空白会去掉，非空，最多 200 个 Swift Character</td></tr><tr><td><code>text</code></td><td>否</td><td>UTF-8 纯文字做法，缺省为空；保留换行</td></tr><tr><td><code>source</code></td><td>否</td><td>原始来源 HTTP/HTTPS URL</td></tr><tr><td><code>image</code></td><td>否</td><td>图片 HTTPS URL；重复该参数传多张，最多 6 张，按参数顺序</td></tr></table></div>
-<p>必须有正文、图片或来源链接中的至少一种。所有非 <code>image</code> 参数只能出现一次。未知参数、版本、路径、URL 片段和重复参数会拒绝；根路径 <code>/</code> 也接受。UTF-8 URL 编码后的整条链接最多 16,384 字节。长做法或大量图片请用文件包。</p>
+<p>必须有正文、图片或来源链接中的至少一种。已定义的非 <code>image</code> 参数只能出现一次。未知参数保留为扩展数据、不影响当前行为；不支持的版本、路径、URL 片段和重复的已定义参数会拒绝；根路径 <code>/</code> 也接受。UTF-8 URL 编码后的整条链接最多 16,384 字节。长做法或大量图片请用文件包。</p>
 <p>最小示例：</p>
 <pre><code>cuiji://share?v=1&amp;title=%E5%8C%85%E9%A5%BA%E5%AD%90&amp;text=250g%20%E9%9D%A2%E7%B2%89%0A%E9%86%9220%E5%88%86%E9%92%9F</code></pre>
 <p>网页 JavaScript（应由用户点击按钮触发；仅编码一次）：</p>
@@ -51,7 +51,7 @@ UIApplication.shared.open(parts.url!)</code></pre>
   &quot;sourceURL&quot;: &quot;https://example.com/recipes/dumplings&quot;,
   &quot;images&quot;: [&quot;images/1.jpg&quot;, &quot;images/2.png&quot;]
 }</code></pre>
-<p><code>format</code>、<code>version</code>、<code>title</code>、<code>text</code>、<code>images</code> 都必须存在；<code>sourceURL</code> 可以省略或为 null。正文最多 100,000 UTF-8 字节。来源最多 4096 UTF-8 字节，HTTP/HTTPS、有效主机、无用户名/密码。来源如果没有已出现在正文中，会作为新段落附到正文末尾。空图片数组合法，但标题之外至少有正文或来源。其他 JSON 字段会忽略；未来协议版本需要明确升级 <code>version</code>。</p>
+<p><code>format</code>、<code>version</code>、<code>title</code> 必须存在；建议发送端完整写入 <code>text</code>、<code>images</code>，旧数据省略时分别按空字符串、空数组处理；<code>sourceURL</code> 可以省略或为 null。正文最多 100,000 UTF-8 字节。来源最多 4096 UTF-8 字节，HTTP/HTTPS、有效主机、无用户名/密码。来源如果没有已出现在正文中，会作为新段落附到正文末尾。空图片数组合法，但标题之外至少有正文或来源。其他 JSON 字段保留结构与类型，在入库后写入菜品的可选 <code>shareMetadata</code> 对象，随备份继续保留。未来功能只能增加可选字段，不改已有字段名、类型或层级，兼容增加字段保持 <code>version = 1</code>；破坏性改版才提高版本，旧接收端会安全拒绝。损坏内容整份拒绝、不部分入库。JSON 重复键、超量嵌套、无效关联、截断图片和不安全 ZIP 路径均拒绝。</p>
 <p>可执行生成器：</p>
 <pre><code>python3 share/make_dish_share.py \
   --title &#x27;包饺子&#x27; --text-file method.txt \

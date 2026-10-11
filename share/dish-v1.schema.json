@@ -6,9 +6,7 @@
   "required": [
     "format",
     "version",
-    "title",
-    "text",
-    "images"
+    "title"
   ],
   "properties": {
     "format": {
@@ -24,7 +22,8 @@
     },
     "text": {
       "type": "string",
-      "description": "Plain UTF-8, at most 100000 bytes; keep newlines."
+      "description": "Plain UTF-8, at most 100000 bytes; keep newlines.",
+      "default": ""
     },
     "sourceURL": {
       "type": [
@@ -42,8 +41,10 @@
         "pattern": "^images/(?!.*\\.\\.)[A-Za-z0-9_.-]+\\.([Jj][Pp][Gg]|[Jj][Pp][Ee][Gg]|[Pp][Nn][Gg]|[Hh][Ee][Ii][Cc]|[Hh][Ee][Ii][Ff]|[Ww][Ee][Bb][Pp]|[Gg][Ii][Ff]|[Tt][Ii][Ff]|[Tt][Ii][Ff][Ff]|[Bb][Mm][Pp])$",
         "description": "No '..'; max 160 UTF-8 bytes. Extensions are case insensitive.",
         "maxLength": 160
-      }
+      },
+      "default": []
     }
   },
-  "description": "Requires text, image or source beyond title. Runtime enforces byte limits, safe paths, image decoding and exact ZIP entries. Extra JSON fields ignored."
+  "description": "Requires text, image or source beyond title. Runtime enforces byte limits, safe paths, image decoding and exact ZIP entries. Additive fields retain their JSON structure and types. Missing text/images default to empty; established field names, types, hierarchy and version are fixed.",
+  "additionalProperties": true
 }
