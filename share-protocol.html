@@ -1,0 +1,84 @@
+<!doctype html><html lang="zh-Hans"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Cuiji Share Protocol v1</title><link rel="stylesheet" href="assets/style.css"><style>main{max-width:1000px}h1{font-size:34px}h2{font-size:24px;margin-top:48px}h3{font-size:20px}p,li{font-size:16px;color:#55534c}pre{background:#eee9de;padding:20px;border-radius:12px;overflow:auto;font-size:13px;line-height:1.6}code{font-size:.9em}table{border-collapse:collapse;font-size:14px;width:100%}td,th{border-bottom:1px solid #ddd6c8;text-align:left;padding:12px}.table{overflow:auto}a{color:#a65f46}</style></head><body><header><a class="brand" href="index.html"><img src="assets/icon.png" width="44" height="44" alt=""><span>Cuiji</span></a><nav><a href="index.html">Product</a><a href="support.html">Support</a></nav></header><main><h1>炊记：单个菜品分享协议 v1</h1>
+<p>更新：2026-10-11。适用 Bundle ID <code>com.nanliu.cuiji</code>。</p>
+<p>每次分享是一道菜。成功后新增独立菜品，排到列表顶部，滚动显示并短暂高亮、标注“刚刚分享”；不会替换已有菜品。同名或相同内容可以重复分享。图片按传入顺序保存，文字保留原有换行。添加后触发现有 iCloud 自动备份（用户已开启时）。没有新增的应用内导入入口。</p>
+<h2>选择接入方式</h2>
+<div class="table"><table><tr><th>场景</th><th>方式</th><th>效果</th></tr><tr><td>网页按钮、另一 App 跳转</td><td><code>cuiji://share</code> URL scheme</td><td>打开炊记，立即新增一道菜；图片通过 HTTPS 下载</td></tr><tr><td>原生 App 完整分享，包括离线图片</td><td><code>.cuijidish</code> 文件 + 系统分享菜单</td><td>用户选择“炊记”，扩展接收；返回炊记时自动添加</td></tr><tr><td>第三方普通分享菜单</td><td>系统 Share Extension</td><td>接收宿主实际提供的文字、图片、网页链接；精确字段建议用文件协议</td></tr><tr><td>文件、AirDrop</td><td>打开 <code>.cuijidish</code> 文件</td><td>直接在炊记添加一道菜</td></tr></table></div>
+<p>系统分享扩展不强制跳转主 App。分享完成提示“已保存到炊记”；用户打开/返回炊记后自动处理收件箱，无需点击恢复。主 App 已在前台时也会监听接收通知。依据 <a href="https://developer.apple.com/library/archive/documentation/General/Conceptual/ExtensibilityPG/ExtensionOverview.html">Apple 的扩展生命周期说明</a>。</p>
+<p><code>.cuijibackup</code> 是完整备份格式，仍按原有规则合并恢复；<code>.cuijidish</code> 是本协议的单菜品包，不能通过改后缀互换。</p>
+<h2>1. URL scheme</h2>
+<p>基础地址：<code>cuiji://share</code>。</p>
+<div class="table"><table><tr><th>参数</th><th>必须</th><th>说明</th></tr><tr><td><code>v</code></td><td>是</td><td>固定 <code>1</code></td></tr><tr><td><code>title</code></td><td>是</td><td>菜名，首尾空白会去掉，非空，最多 200 个 Swift Character</td></tr><tr><td><code>text</code></td><td>否</td><td>UTF-8 纯文字做法，缺省为空；保留换行</td></tr><tr><td><code>source</code></td><td>否</td><td>原始来源 HTTP/HTTPS URL</td></tr><tr><td><code>image</code></td><td>否</td><td>图片 HTTPS URL；重复该参数传多张，最多 6 张，按参数顺序</td></tr></table></div>
+<p>必须有正文、图片或来源链接中的至少一种。所有非 <code>image</code> 参数只能出现一次。未知参数、版本、路径、URL 片段和重复参数会拒绝；根路径 <code>/</code> 也接受。UTF-8 URL 编码后的整条链接最多 16,384 字节。长做法或大量图片请用文件包。</p>
+<p>最小示例：</p>
+<pre><code>cuiji://share?v=1&amp;title=%E5%8C%85%E9%A5%BA%E5%AD%90&amp;text=250g%20%E9%9D%A2%E7%B2%89%0A%E9%86%9220%E5%88%86%E9%92%9F</code></pre>
+<p>网页 JavaScript（应由用户点击按钮触发；仅编码一次）：</p>
+<pre><code>const url = new URL(&#x27;cuiji://share&#x27;);
+url.searchParams.set(&#x27;v&#x27;, &#x27;1&#x27;);
+url.searchParams.set(&#x27;title&#x27;, &#x27;包饺子&#x27;);
+url.searchParams.set(&#x27;text&#x27;, &#x27;250g 面粉，125ml 温水。\n醒20分钟，再揉匀。&#x27;);
+url.searchParams.set(&#x27;source&#x27;, &#x27;https://example.com/recipes/dumplings&#x27;);
+url.searchParams.append(&#x27;image&#x27;, &#x27;https://example.com/photos/step-1.jpg&#x27;);
+url.searchParams.append(&#x27;image&#x27;, &#x27;https://example.com/photos/step-2.jpg&#x27;);
+// URLSearchParams 使用 + 表示空格。协议使用 RFC 3986，需转为 %20。
+location.href = url.toString().replace(/\+/g, &#x27;%20&#x27;);</code></pre>
+<p>原生 Swift：</p>
+<pre><code>var parts = URLComponents()
+parts.scheme = &quot;cuiji&quot;
+parts.host = &quot;share&quot;
+parts.queryItems = [
+    URLQueryItem(name: &quot;v&quot;, value: &quot;1&quot;),
+    URLQueryItem(name: &quot;title&quot;, value: &quot;包饺子&quot;),
+    URLQueryItem(name: &quot;text&quot;, value: &quot;250g 面粉\n醒20分钟&quot;),
+    URLQueryItem(name: &quot;image&quot;, value: &quot;https://example.com/step-1.jpg&quot;)
+]
+UIApplication.shared.open(parts.url!)</code></pre>
+<p>URLComponents 保留字面 <code>+</code>；接收端不把 <code>+</code> 当空格，不做二次百分号解码。调用 App 如果使用 <code>canOpenURL</code> 预检查，需要在其 <code>LSApplicationQueriesSchemes</code> 中加 <code>cuiji</code>。未安装炊记时由调用方提供下载提示，不存在通用跨浏览器可靠安装检测。自定义 scheme 不应作为身份认证机制。</p>
+<p>图片必须可匿名直接访问，不依赖 Cookie 或用户登录，不接收 <code>data:</code>、<code>file:</code>、HTTP 图片链接或带用户名/密码的 URL。允许 HTTPS 重定向，禁止降级到 HTTP。下载成功后图片保存在本机，后续查看不依赖原网址。链接图片任一失败时整道菜不添加，可修正后重新分享。</p>
+<h2>2. 单菜品文件包 <code>.cuijidish</code></h2>
+<p>文件本体是标准 ZIP，可用 Stored 或 Deflate 压缩，后缀改为 <code>.cuijidish</code>。</p>
+<ul><li>UTI：<code>com.nanliu.cuiji.dish</code>，继承 <code>public.zip-archive</code> 与 <code>public.content</code>。</li><li>MIME：<code>application/vnd.cuiji.dish+zip</code>。</li><li>ZIP 根目录必须有 <code>manifest.json</code>，UTF-8 JSON。</li><li>图片直接存为 <code>images/&lt;文件名&gt;</code>；ZIP 不要额外放目录条目、<code>__MACOSX</code>、缩略图或其他未声明文件。</li><li>文件名只使用 ASCII 字母、数字、<code>-_.</code>；禁止 <code>..</code>、绝对路径或子目录。完整图片路径最多 160 UTF-8 字节。</li><li>每个图片路径唯一，清单与 ZIP 条目必须完全对应；图片顺序由清单数组决定。</li><li>manifest 最多 512 KiB；包与解压总量均最多 50 MiB；单图最多 20 MiB；最多 6 张。</li><li>图片支持 JPEG、PNG、HEIC/HEIF、WebP、GIF、TIFF、BMP，以 iOS 实际解码能力为准。动态图以首帧保存；入库时压缩为最大边 1600 px 的 JPEG，原透明背景不保留。</li></ul>
+<p>结构：</p>
+<pre><code>包饺子.cuijidish       # ZIP 文件
+  manifest.json
+  images/1.jpg
+  images/2.png</code></pre>
+<p><code>manifest.json</code>：</p>
+<pre><code>{
+  &quot;format&quot;: &quot;com.nanliu.cuiji.dish&quot;,
+  &quot;version&quot;: 1,
+  &quot;title&quot;: &quot;包饺子&quot;,
+  &quot;text&quot;: &quot;250g 面粉，125ml 温水。\n醒20分钟，再揉匀。&quot;,
+  &quot;sourceURL&quot;: &quot;https://example.com/recipes/dumplings&quot;,
+  &quot;images&quot;: [&quot;images/1.jpg&quot;, &quot;images/2.png&quot;]
+}</code></pre>
+<p><code>format</code>、<code>version</code>、<code>title</code>、<code>text</code>、<code>images</code> 都必须存在；<code>sourceURL</code> 可以省略或为 null。正文最多 100,000 UTF-8 字节。来源最多 4096 UTF-8 字节，HTTP/HTTPS、有效主机、无用户名/密码。来源如果没有已出现在正文中，会作为新段落附到正文末尾。空图片数组合法，但标题之外至少有正文或来源。其他 JSON 字段会忽略；未来协议版本需要明确升级 <code>version</code>。</p>
+<p>可执行生成器：</p>
+<pre><code>python3 share/make_dish_share.py \
+  --title &#x27;包饺子&#x27; --text-file method.txt \
+  --source &#x27;https://example.com/recipes/dumplings&#x27; \
+  --image step-1.jpg --image step-2.png \
+  --output 包饺子.cuijidish</code></pre>
+<p>规范化清单参考 <a href="share/dish-v1.schema.json">JSON Schema</a>。限制与实际 iOS 解码结果以接收端校验为准。生成器只打包本地文件，不上传。</p>
+<p>原生发送文件：</p>
+<pre><code>let controller = UIActivityViewController(activityItems: [fileURL], applicationActivities: nil)
+// 在 iPad 上配置 popoverPresentationController 的 sourceView/sourceRect。
+present(controller, animated: true)</code></pre>
+<p>发送端的 <code>fileURL</code> 必须有 <code>.cuijidish</code> 后缀，不能直接分享 ZIP 内的 manifest。可以通过系统菜单分享给炊记，也可以将文件交给系统“用炊记打开”。文件方式不用联网。</p>
+<h2>3. 普通系统分享与网页内容</h2>
+<p>扩展接收文字、图片、网页和单菜品文件，不依赖每个第三方 App 都实现本协议。</p>
+<ul><li>普通 App：分享图片/图片文件、纯文字、来源 URL。标题优先用宿主提供的 attributedTitle，缺少时取正文第一行（最多 80 字），仍缺少则用“分享的菜品”，添加后可编辑。</li><li>一个宿主有多种表示时优先单菜品包；同一 provider 的处理顺序为网页预处理、图片、URL、纯文字。网页 URL 和正文要作为不同附件传入，或直接采用结构化文件。</li><li>炊记不从图片 OCR 识别正文；如果发送端只提供图片，保存的就是图片。只提供普通网页 URL 时保留链接，不承诺能取得全文。</li><li>Safari：通过 Apple 的网页预处理机制，优先取得用户选中的文字；无选中文字时使用页面可见正文（<code>innerText</code>），保留页面标题、来源及首个 <code>og:image</code>。内容过大时选中需要的段落再分享。</li><li>普通第三方 App 能否提供网页正文取决于其分享实现；不会读取该 App 私有数据或绕过登录限制。</li></ul>
+<p>你控制的网页可以放以下结构化片段，Safari 分享时优先使用它；无需增设炊记内入口：</p>
+<pre><code>&lt;script type=&quot;application/json&quot; data-cuiji-dish&gt;
+{
+  &quot;title&quot;: &quot;包饺子&quot;,
+  &quot;text&quot;: &quot;250g 面粉\n醒20分钟&quot;,
+  &quot;images&quot;: [&quot;https://example.com/photos/step-1.jpg&quot;]
+}
+&lt;/script&gt;</code></pre>
+<p>图片字段支持相对网页路径，Safari 预处理会转换为 HTTPS 绝对地址。来源使用当前页面 URL。此片段只用于 Safari 分享网页，不等同于可直接打开的 JSON 文件。</p>
+<h2>4. 保存、失败与对接验收</h2>
+<p>解包、下载、解码、压缩在后台执行；完成全部验证后原子保存。错误会显示简短提示，原有菜品不变。用户重新发起分享会创建另一道菜，这是有意允许的重复。扩展收件箱内部使用 UUID，进程中断后重试同一个待处理包不会重复添加。</p>
+<p>分享时正在编辑的菜品不会关闭或丢失草稿；回到列表后显示新增提示。减少动态效果开启时不播放滚动动画。中英日提示均已适配。</p>
+<p>发送端验收建议：中文/英文/日语与换行；多图顺序；空图片纯文字；离线文件包；相同内容分享两次；冷启动；正在编辑时分享；错误版本、损坏图片、下载失败、尺寸超限。不要通过 URL 传本地路径或把 Base64 图片塞进链接。</p>
+<h2>5. 工程配置</h2>
+<p>主 App 与 Share Extension 使用共同 App Group <code>group.com.nanliu.cuiji</code>。扩展 Bundle ID <code>com.nanliu.cuiji.share</code>。共享容器只存待接收包，主菜品库仍留在主 App 沙盒。开发者账号中两个 App ID 必须启用并关联同一组，签名描述文件须包含该权限。</p><p><a href="share/make_dish_share.py">Download Python packet generator</a></p></main><footer>Cuiji · liunangit</footer></body></html>

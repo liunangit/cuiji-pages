@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:com.nanliu.cuiji:dish:v1",
+  "title": "Cuiji single dish ZIP manifest v1",
+  "type": "object",
+  "required": [
+    "format",
+    "version",
+    "title",
+    "text",
+    "images"
+  ],
+  "properties": {
+    "format": {
+      "const": "com.nanliu.cuiji.dish"
+    },
+    "version": {
+      "const": 1
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Trimmed nonempty title; at most 200 Swift extended grapheme clusters."
+    },
+    "text": {
+      "type": "string",
+      "description": "Plain UTF-8, at most 100000 bytes; keep newlines."
+    },
+    "sourceURL": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "HTTP/HTTPS URL with host, without credentials; max 4096 UTF-8 bytes."
+    },
+    "images": {
+      "type": "array",
+      "maxItems": 6,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^images/(?!.*\\.\\.)[A-Za-z0-9_.-]+\\.([Jj][Pp][Gg]|[Jj][Pp][Ee][Gg]|[Pp][Nn][Gg]|[Hh][Ee][Ii][Cc]|[Hh][Ee][Ii][Ff]|[Ww][Ee][Bb][Pp]|[Gg][Ii][Ff]|[Tt][Ii][Ff]|[Tt][Ii][Ff][Ff]|[Bb][Mm][Pp])$",
+        "description": "No '..'; max 160 UTF-8 bytes. Extensions are case insensitive.",
+        "maxLength": 160
+      }
+    }
+  },
+  "description": "Requires text, image or source beyond title. Runtime enforces byte limits, safe paths, image decoding and exact ZIP entries. Extra JSON fields ignored."
+}
